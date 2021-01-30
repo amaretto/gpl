@@ -25,13 +25,18 @@ func display(path string, v reflect.Value) {
 			display(fieldPath, v.Field(i))
 		}
 	case reflect.Map:
+		var s string
 		for _, key := range v.MapKeys() {
-			if reflect.ValueOf(key).Kind() == reflect.Struct {
-				keypath := fmt.Sprintf("%s.%s", path, formatAtom(key))
-				display(keypath, reflect.ValueOf(key))
+			if key.Kind() == reflect.Struct {
+				for i := 0; i < key.NumField(); i++ {
+					s += fmt.Sprintf("%s:%s,", key.Type().Field(i).Name, formatAtom(key.Field(i)))
+				}
+				path = fmt.Sprintf("%s[%s{%s}]", path, reflect.TypeOf(key), s)
 			} else {
-				display(fmt.Sprintf("%s[%s]", path, formatAtom(key)), v.MapIndex(key))
+				path = fmt.Sprintf("%s[%s]", path, formatAtom(key))
 			}
+			display(path, v.MapIndex(key))
+			//display(fmt.Sprintf("%s[%s]", path, formatAtom(key)), v.MapIndex(key))
 		}
 	case reflect.Ptr:
 		if v.IsNil() {
