@@ -55,8 +55,13 @@ func encode(buf *bytes.Buffer, v reflect.Value, space int) error {
 			if err := encode(buf, v.Field(i), len(v.Type().Field(i).Name)+3); err != nil {
 				return err
 			}
-			buf.WriteString(")\n")
+			if i != v.NumField()-1 {
+				buf.WriteString(")\n")
+			} else {
+				buf.WriteByte(')')
+			}
 		}
+		buf.WriteString(")\n")
 	case reflect.Map:
 		buf.WriteByte('(')
 		for i, key := range v.MapKeys() {
