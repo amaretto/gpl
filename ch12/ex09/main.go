@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"text/scanner"
 )
 
@@ -109,39 +110,54 @@ func Unmarshal(data []byte, out interface{}) (err error) {
 type Decoder struct {
 	r   io.Reader
 	buf []byte
+	l   *lexer
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r}
+	dec := &Decoder{r: r}
+	dec.l = &lexer{scan: scanner.Scanner{Mode: scanner.GoTokens}}
+	dec.l.scan.Init(dec.r)
+	dec.l.next()
+	return dec
 }
 
 func (dec *Decoder) Decode(out interface{}) (err error) {
-	lex := &lexer{scan: scanner.Scanner{Mode: scanner.GoTokens}}
-	lex.scan.Init(dec.r)
-	lex.next()
-	defer func() {
-		if x := recover(); x != nil {
-			err = fmt.Errorf("error at %s: %v", lex.scan.Position, x)
-		}
-	}()
-	read(lex, reflect.ValueOf(out).Elem())
+	read(dec.l, reflect.ValueOf(out).Elem())
 	return nil
 }
 
 // Token API
-type Name struct {
-	Local string
-}
-
 type Token interface{}
-type Symbol struct{ Name Name }
+type Symbol struct{ Name string }
 type String string
 type Int int
-type StartList struct{ Name Name }
-type EndList struct{ Name Name }
+type StartList struct{} // (
+type EndList struct{}   // )
 
 func (dec *Decoder) Token() (Token, error) {
-	return nil, nil
+	switch dec.l.token {
+	case scanner.EOF:
+		return nil, io.EOF
+	case scanner.Ident:
+		name := dec.l.text()
+		dec.l.next()
+		return Symbol{Name: name}, nil
+	case scanner.String:
+		s, _ := strconv.Unquote(dec.l.text())
+		dec.l.next()
+		return String(s), nil
+	case scanner.Int:
+		i, _ := strconv.Atoi(dec.l.text())
+		dec.l.next()
+		return Int(i), nil
+	case '(':
+		dec.l.next()
+		return StartList{}, nil
+	case ')':
+		dec.l.next()
+		return EndList{}, nil
+	}
+	return nil, fmt.Errorf("unexpected token %q", dec.l.text())
 }
 
 type Movie struct {
@@ -161,8 +177,6 @@ func main() {
 ((Title "Dr. Strangelove")
  (Subtitle "How I Learned to Stop Worrying and Love the Bomb")
  (Year 1964)
- (Color nil)
- (Satire t)
  (Actor (("Dr. Strangelove" "Peter Sellers")
          ("Grp. Capt. Lionel Mandrake" "Peter Sellers")
          ("Pres. Merkin Muffley" "Peter Sellers")
@@ -173,11 +187,10 @@ func main() {
           "Best Adapted Screenplay (Nomin.)"
           "Best Director (Nomin.)"
           "Best Picture (Nomin.)"))
- (Sequel nil)
- (Float 1.100000)
- (Complex #C(1.0, 2.0)))
 `)
 	dec := NewDecoder(bytes.NewReader(data))
+	var stack []string
+	var pos []int
 	for {
 		tok, err := dec.Token()
 		if err == io.EOF {
@@ -188,7 +201,21 @@ func main() {
 		}
 		switch tok := tok.(type) {
 		case StartList:
-
+			pos = append(pos, len(stack))
+		case EndList:
+			fmt.Printf("%s\n", strings.Join(stack, " "))
+			if pos[len(pos)-1] > 0 {
+				stack = stack[:pos[len(pos)-1]]
+			} else {
+				stack = []string(nil)
+			}
+			pos = pos[:len(pos)-1]
+		case Symbol:
+			stack = append(stack, tok.Name)
+		case String:
+			stack = append(stack, string(tok))
+		case Int:
+			stack = append(stack, strconv.Itoa(int(tok)))
 		}
 	}
 
