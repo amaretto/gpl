@@ -43,16 +43,9 @@ func encode(buf *bytes.Buffer, v reflect.Value) error {
 		buf.WriteByte(')')
 	case reflect.Interface:
 		buf.WriteByte('(')
-		fmt.Fprint(buf, v.Type().Name())
+		fmt.Fprint(buf, v.Elem().Type())
 		buf.WriteByte('(')
-		for i := 0; i < v.NumField(); i++ {
-			if i > 0 {
-				buf.WriteByte(' ')
-			}
-			if err := encode(buf, v.Field(i)); err != nil {
-				return err
-			}
-		}
+		encode(buf, v.Elem())
 		buf.WriteString("))")
 	case reflect.Struct:
 		buf.WriteByte('(')
@@ -108,6 +101,7 @@ type Movie struct {
 	Sequel          *string
 	Float           float64
 	Complex         complex128
+	Interface       interface{}
 }
 
 func main() {
@@ -132,8 +126,9 @@ func main() {
 			"Best Director (Nomin.)",
 			"Best Picture (Nomin.)",
 		},
-		Float:   1.1,
-		Complex: 1 + 2i,
+		Float:     1.1,
+		Complex:   1 + 2i,
+		Interface: []int{1, 2, 3},
 	}
 	b, err := Marshal(strangelove)
 	if err != nil {
