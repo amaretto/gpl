@@ -203,7 +203,9 @@ func main() {
 		case StartList:
 			pos = append(pos, len(stack))
 		case EndList:
-			fmt.Printf("%s\n", strings.Join(stack, " "))
+			if len(stack) > 1 {
+				fmt.Printf("%s\n", strings.Join(stack, " "))
+			}
 			if pos[len(pos)-1] > 0 {
 				stack = stack[:pos[len(pos)-1]]
 			} else {
