@@ -1,0 +1,1 @@
+デフォルト値の場合でもflag.CommandLine.Var経由でSetの判定ロジックを通り、戻されたmainではString()メソッドを使って表示されているから

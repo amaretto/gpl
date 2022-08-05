@@ -1,0 +1,8 @@
+hoge
+fuga
+hoge
+hoge
+fuga
+foo
+bar
+bar

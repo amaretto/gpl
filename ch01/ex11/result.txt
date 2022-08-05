@@ -1,0 +1,15 @@
+# 利用したリスト
+https://www.domcop.com/top-10-million-domains
+
+# command
+`cut -f 2 -d "," ~/Downloads/top10milliondomains.csv | xargs go run ex11.go`
+
+# 結果
+## 応答がない場合
+Get https://anomalouschloe.com: dial tcp: i/o timeout
+Get https://tallica.lnk.to: dial tcp: i/o timeout
+Get https://shop.blacklabelsociety.com: dial tcp: i/o timeout
+
+## 存在しない場合
+Get https://vladimiryakuba.ru: dial tcp: lookup vladimiryakuba.ru: no such host
+Get https://youthh2o.com: dial tcp: lookup youthh2o.com: no such host
